@@ -55,7 +55,7 @@ export const generateAddresses = async (mysql: ServerlessMysql, xpubkey: string,
   const allAddresses: string[] = [];
 
   do {
-    const addrMap = hathorLib.helpers.getAddresses(xpubkey, highestCheckedIndex + 1, maxGap, 'mainnet');
+    const addrMap = hathorLib.helpers.getAddresses(xpubkey, highestCheckedIndex + 1, maxGap, process.env.NETWORK);
     allAddresses.push(...Object.keys(addrMap));
 
     const results: DbSelectResult = await mysql.query(
