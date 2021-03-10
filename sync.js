@@ -18,20 +18,14 @@ const DEFAULT_SERVER = process.env.DEFAULT_SERVER || 'http://185.200.240.114:808
 const globalCache = {};
 
 const main = async () => {
-  /*const response = await axios.get(DEFAULT_SERVER + 'transaction?type=block&count=1');
+  const response = await axios.get(DEFAULT_SERVER + 'transaction?type=block&count=1');
 
   const { transactions } = response.data;
   const bestBlock = transactions[0];
   const bestBlockHeight = bestBlock.height;
-  const parents = bestBlock.parents;*/
+  const parents = bestBlock.parents;
 
-  // console.log('parents: ', parents);
-
-  // const data = await recursivelyDownloadTx(bestBlock.tx_id, parents);
-
-  // console.log('Data: ', data);
-
-  const blocks = await recursivelyDownloadBlocks('0000000000000000efe6c4a970c95b873d95e830309f5df6376c448b29035a25', 1235224 - 10);
+  const blocks = await recursivelyDownloadBlocks(bestBlock.tx_id, bestBlockHeight - 10);
 
   const allParents = new Set(blocks.reduce((acc, block) => {
     return [
@@ -57,14 +51,21 @@ const main = async () => {
   let allTxs = [];
   await queue.reduce(async (previous, current) => {
     const data = await previous;
-    console.log('DATA: ', data);
 
     allTxs = [...allTxs, ...data];
 
     return current();
   }, Promise.resolve([]));
 
+  fs.writeFileSync('./txs.json', JSON.stringify(allTxs));
+
   console.log('done', allTxs);
+
+  allTxs.forEach((tx) => {
+    const prepared = prepareTx(tx);
+
+    sendEvent(prepared);
+  });
 };
 
 const downloadTx = async (txId) => {
@@ -123,6 +124,13 @@ const recursivelyDownloadBlocks = async (txId, targetHeight, data = []) => {
 
 main();
 
+const prepareTx = (tx) => {
+  return {
+    ...tx,
+    tx_id: tx.hash,
+    raw: ''
+  }
+};
 
 // --
 
@@ -138,6 +146,8 @@ const sendEvent = (msg) => {
   record.messageId = msg.tx_id;
   record.md5OfBody = msg.tx_id;
   record.attributes.MessageDeduplicationId = msg.tx_id;
+
+  console.log(record.body);
 
   const params = {
     // FunctionName is composed of: service name - stage - function name
