@@ -13,29 +13,71 @@ AWS.config.update({region:'us-east-1'});
 const FULLNODE_URL = process.env.FULLNODE_URL || 'ws://localhost:8080/v1a/ws/';
 const eventTemplate = fs.readFileSync('events/eventTemplate.json', 'utf8');
 
-// We start by querying the best block
+const DEFAULT_SERVER = process.env.DEFAULT_SERVER || 'http://185.200.240.114:8080/v1a/';
+// https://node1.foxtrot.testnet.hathor.network/v1a/
+const globalCache = {};
 
 const main = async () => {
-  const response = await axios.get('https://node1.foxtrot.testnet.hathor.network/v1a/transaction?type=block&count=1');
+  /*const response = await axios.get(DEFAULT_SERVER + 'transaction?type=block&count=1');
 
   const { transactions } = response.data;
   const bestBlock = transactions[0];
   const bestBlockHeight = bestBlock.height;
-  const parents = bestBlock.parents;
+  const parents = bestBlock.parents;*/
 
-  console.log('parents: ', parents);
+  // console.log('parents: ', parents);
 
-  const data = await recursivelyDownloadTx(bestBlock.tx_id, parents);
+  // const data = await recursivelyDownloadTx(bestBlock.tx_id, parents);
 
-  console.log('Data: ', data);
+  // console.log('Data: ', data);
+
+  const blocks = await recursivelyDownloadBlocks('0000000000000000efe6c4a970c95b873d95e830309f5df6376c448b29035a25', 1235224 - 10);
+
+  const allParents = new Set(blocks.reduce((acc, block) => {
+    return [
+      ...acc, {
+        blockId: block.hash,
+        txs: [
+          block.parents[1],
+          block.parents[2],
+        ]
+      }
+    ]
+  }, []));
+
+  console.log(allParents);
+
+  const queue = [...allParents].map(({ blockId, txs }) => {
+    return () => {
+      console.log('RUN!');
+      return recursivelyDownloadTx(blockId, txs);
+    };
+  });
+
+  let allTxs = [];
+  await queue.reduce(async (previous, current) => {
+    const data = await previous;
+    console.log('DATA: ', data);
+
+    allTxs = [...allTxs, ...data];
+
+    return current();
+  }, Promise.resolve([]));
+
+  console.log('done', allTxs);
 };
 
 const downloadTx = async (txId) => {
-  const response = await axios.get(`https://node1.foxtrot.testnet.hathor.network/v1a/transaction?id=${txId}`);
+  const response = await axios.get(DEFAULT_SERVER + `transaction?id=${txId}`);
+
+  if (globalCache[txId]) return globalCache[txId];
+
+  globalCache[txId] = response.data;
 
   return response.data;
 };
 
+// We need to fetch
 const recursivelyDownloadTx = async (blockId, txIds = [], data = []) => {
   if (txIds.length === 0) {
     return data;
@@ -65,28 +107,18 @@ const recursivelyDownloadTx = async (blockId, txIds = [], data = []) => {
   return recursivelyDownloadTx(blockId, [...txIds, ...newParents], [...data, tx]);
 };
 
-const recursivelyDownloadBlock = async (txId, downloadUntilHeight, data = []) => {
+const recursivelyDownloadBlocks = async (txId, targetHeight, data = []) => {
+  console.log('Downloading block: ', txId);
   const txData = await downloadTx(txId);
   const { tx, meta } = txData;
 
-  const payloads = await Promise.all(tx.parents.map((parent) => {
-    return downloadTx(parent);
-  }));
+  if (meta.height === targetHeight) {
+    return [...data, tx];
+  }
 
-  const nextBlock = payloads.reduce(({tx, meta}, accTx) => {
-    if (tx.parents.length === 3) {
-      return tx;
-    }
+  const nextBlock = tx.parents[0];
 
-    return accTx;
-  }, null);
-
-  const newParents = tx.parents.filter((parent) => {
-    return txIds.indexOf(parent) < 0;
-  });
-
-  console.log('done, downloading recursively');
-  return recursivelyDownloadTx(blockId, [...txIds, ...newParents], [...data, tx]);
+  return recursivelyDownloadBlocks(nextBlock, targetHeight, [...data, tx]);
 };
 
 main();
