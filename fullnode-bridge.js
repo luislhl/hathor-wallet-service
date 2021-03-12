@@ -11,6 +11,8 @@ const fs = require('fs');
 const WebSocket = require('ws');
 const AWS = require('aws-sdk');
 
+require('dotenv').config()
+
 // we need to set a region even if we don't make any calls
 AWS.config.update({region:'us-east-1'});
 
@@ -25,7 +27,7 @@ let count = 0;
 
 const lambda = new AWS.Lambda({
   apiVersion: '2015-03-31',
-  endpoint: 'http://localhost:3002',
+  endpoint: process.env.LAMBDA_ENDPOINT,
 });
 
 
@@ -38,7 +40,7 @@ ws.on('message', (data) => {
   if (msg.type === 'network:new_tx_accepted') {
     count += 1;
     console.log('new tx, count', count, 'height', msg.height, msg.tx_id);
-    
+
     if (msg.is_voided) {
       console.log('** voided', msg.tx_id);
       return;
@@ -53,6 +55,7 @@ ws.on('message', (data) => {
 });
 
 const sendEvent = (msg) => {
+  console.log('MSG: ', msg);
   const newEvent = JSON.parse(eventTemplate);
   const record = newEvent.Records[0];
   record.body = msg;
