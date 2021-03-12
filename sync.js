@@ -1,9 +1,13 @@
 /* eslint-disable */
 
 const fs = require('fs');
+const readline = require('readline');
+const { once } = require('events');
 const WebSocket = require('ws');
 const AWS = require('aws-sdk');
 const axios = require('axios').default;
+const lineByLine = require('n-readlines');
+const Promise = require('bluebird');
 
 require('dotenv').config()
 
@@ -25,47 +29,42 @@ const main = async () => {
   const bestBlockHeight = bestBlock.height;
   const parents = bestBlock.parents;
 
-  const blocks = await recursivelyDownloadBlocks(bestBlock.tx_id, bestBlockHeight - 10);
+  await downloadBlocks(bestBlock.tx_id, 0);
 
-  const allParents = new Set(blocks.reduce((acc, block) => {
-    return [
-      ...acc, {
-        blockId: block.hash,
-        txs: [
-          block.parents[1],
-          block.parents[2],
-        ]
+  return;
+};
+
+const downloadBlocks = async (fromTxId, toHeight) => {
+  const handle = fs.createWriteStream('./blocks.txt');
+
+  const blocks = await recursivelyDownloadBlocks(handle, fromTxId, toHeight);
+
+  handle.end();
+};
+
+const downloadTxFromBlocks = async (quantity) => {
+  const liner = new lineByLine('./blocks.txt');
+
+  let line;
+  while (line = liner.next()) {
+    const [blockId, tx1, tx2] = line.toString().split(' ');
+
+    const data = await recursivelyDownloadTx(blockId, [tx1, tx2]);
+    if (data.length > 0) {
+      console.log(data.length);
+      for (let i = 0; i < data.length; i++) {
+        const prepared = prepareTx(data[i]);
+
+        await new Promise((resolve) => {
+          sendEvent(prepared);
+
+          setTimeout(resolve, 0);
+        });
+
+        console.log('Sent tx: ', prepared.tx_id);
       }
-    ]
-  }, []));
-
-  console.log(allParents);
-
-  const queue = [...allParents].map(({ blockId, txs }) => {
-    return () => {
-      console.log('RUN!');
-      return recursivelyDownloadTx(blockId, txs);
-    };
-  });
-
-  let allTxs = [];
-  await queue.reduce(async (previous, current) => {
-    const data = await previous;
-
-    allTxs = [...allTxs, ...data];
-
-    return current();
-  }, Promise.resolve([]));
-
-  fs.writeFileSync('./txs.json', JSON.stringify(allTxs));
-
-  console.log('done', allTxs);
-
-  allTxs.forEach((tx) => {
-    const prepared = prepareTx(tx);
-
-    sendEvent(prepared);
-  });
+    }
+  }
 };
 
 const downloadTx = async (txId) => {
@@ -85,18 +84,15 @@ const recursivelyDownloadTx = async (blockId, txIds = [], data = []) => {
   }
 
   const txId = txIds.pop(); // Mutate txIds
-  console.log('downloading', txId);
   const txData = await downloadTx(txId);
   const { tx, meta } = txData;
 
   if (tx.parents.length > 2) {
     // We downloaded a block, we should ignore it
-    console.log('block, ignoring..');
     return recursivelyDownloadTx(blockId, txIds, data);
   }
 
   if (meta.first_block !== blockId) {
-    console.log('first block != blockId');
     return recursivelyDownloadTx(blockId, txIds, data);
   }
 
@@ -104,31 +100,42 @@ const recursivelyDownloadTx = async (blockId, txIds = [], data = []) => {
     return txIds.indexOf(parent) < 0;
   });
 
-  console.log('done, downloading recursively');
   return recursivelyDownloadTx(blockId, [...txIds, ...newParents], [...data, tx]);
 };
 
-const recursivelyDownloadBlocks = async (txId, targetHeight, data = []) => {
-  console.log('Downloading block: ', txId);
+const recursivelyDownloadBlocks = async (handle, txId, targetHeight, data = []) => {
   const txData = await downloadTx(txId);
   const { tx, meta } = txData;
 
+  console.log(meta.height);
+
+  handle.write(`${txId} ${tx.parents[1]} ${tx.parents[2]}\r\n`);
+
+  const prepared = prepareTx(tx);
+
+  await sendEvent(prepared);
+
   if (meta.height === targetHeight) {
-    return [...data, tx];
+    return txId;
   }
 
   const nextBlock = tx.parents[0];
 
-  return recursivelyDownloadBlocks(nextBlock, targetHeight, [...data, tx]);
+  return recursivelyDownloadBlocks(handle, nextBlock, targetHeight, [] /*[...data, tx]*/);
 };
-
-main();
 
 const prepareTx = (tx) => {
   return {
     ...tx,
     tx_id: tx.hash,
-    raw: ''
+    raw: '',
+    outputs: tx.outputs.map((output) => {
+      if (!output.token) {
+        output.token = '00';
+      }
+
+      return output;
+    }),
   }
 };
 
@@ -139,35 +146,43 @@ const lambda = new AWS.Lambda({
   endpoint: process.env.LAMBDA_ENDPOINT || 'http://localhost:3002',
 });
 
-const sendEvent = (msg) => {
-  const newEvent = JSON.parse(eventTemplate);
-  const record = newEvent.Records[0];
-  record.body = msg;
-  record.messageId = msg.tx_id;
-  record.md5OfBody = msg.tx_id;
-  record.attributes.MessageDeduplicationId = msg.tx_id;
+const sendEvent = async (msg) => {
+  return new Promise((resolve, reject) => {
+    const newEvent = JSON.parse(eventTemplate);
+    const record = newEvent.Records[0];
+    record.body = msg;
+    record.messageId = msg.tx_id;
+    record.md5OfBody = msg.tx_id;
+    record.attributes.MessageDeduplicationId = msg.tx_id;
 
-  console.log(record.body);
-
-  const params = {
-    // FunctionName is composed of: service name - stage - function name
-    FunctionName: 'hathor-wallet-service-local-onNewTxEvent',
-    // we could just send the tx, but we'll use the template to emulate a SQS message
-    Payload: JSON.stringify(newEvent),
-  };
-  lambda.invoke(params, (err, data) => {
-    if (err) {
-      console.error('ERROR', msg.tx_id, err);
-      return process.exit(1);
-    }
-    else {
-      console.log('lambda successfull for', msg.tx_id);
-      queue.shift();
-      if (queue.length > 0) {
-        const tx = queue[0];
-        console.log('process from queue', tx.tx_id, 'height', tx.height);
-        sendEvent(tx);
+    const params = {
+      // FunctionName is composed of: service name - stage - function name
+      FunctionName: 'hathor-wallet-service-production-onNewTxEvent',
+      // we could just send the tx, but we'll use the template to emulate a SQS message
+      Payload: JSON.stringify(newEvent),
+    };
+    lambda.invoke(params, (err, data) => {
+      console.log('data: ', data);
+      if (err) {
+        console.error('ERROR', msg.tx_id, err);
+        reject();
+        return process.exit(1);
+      } else {
+        resolve()
+        console.log('lambda successfull for', msg.tx_id);
+        // queue.shift();
+        /*if (queue.length > 0) {
+          const tx = queue[0];
+          console.log('process from queue', tx.tx_id, 'height', tx.height);
+          sendEvent(tx);
+        }*/
       }
-    }
+    });
   });
+};
+
+module.exports = {
+  main,
+  downloadBlocks,
+  downloadTxFromBlocks,
 };
