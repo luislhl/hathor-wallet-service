@@ -17,8 +17,7 @@ AWS.config.update({region:'us-east-1'});
 const FULLNODE_URL = process.env.FULLNODE_URL || 'ws://localhost:8080/v1a/ws/';
 const eventTemplate = fs.readFileSync('events/eventTemplate.json', 'utf8');
 
-const DEFAULT_SERVER = process.env.DEFAULT_SERVER || 'http://185.200.240.114:8080/v1a/';
-// https://node1.foxtrot.testnet.hathor.network/v1a/
+const DEFAULT_SERVER = process.env.DEFAULT_SERVER || 'https://node1.foxtrot.testnet.hathor.network/v1a/';
 const globalCache = {};
 
 const main = async () => {
@@ -29,7 +28,7 @@ const main = async () => {
   const bestBlockHeight = bestBlock.height;
   const parents = bestBlock.parents;
 
-  await downloadBlocks(bestBlock.tx_id, 0);
+  await downloadBlocks(bestBlock.tx_id, 3000);
 
   return;
 };
@@ -58,7 +57,7 @@ const downloadTxFromBlocks = async (quantity) => {
         await new Promise((resolve) => {
           sendEvent(prepared);
 
-          setTimeout(resolve, 0);
+          setTimeout(resolve, 300);
         });
 
         console.log('Sent tx: ', prepared.tx_id);
