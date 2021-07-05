@@ -37,6 +37,13 @@ import {
   AddressTotalBalance,
 } from '@src/types';
 
+import {
+  Op,
+} from 'sequelize';
+import {
+  address,
+} from '@src/schemas';
+
 import { getUnixTimestamp, isAuthority } from '@src/utils';
 
 const BLOCK_VERSION = [
@@ -72,29 +79,29 @@ export const generateAddresses = async (mysql: ServerlessMysql, xpubkey: string,
     const addrMap = walletUtils.getAddresses(derivedXpub, highestCheckedIndex + 1, maxGap, process.env.NETWORK);
     allAddresses.push(...Object.keys(addrMap));
 
-    const results: DbSelectResult = await mysql.query(
-      `SELECT \`address\`,
-              \`index\`,
-              \`transactions\`
-         FROM \`address\`
-        WHERE \`address\`
-           IN (?)`,
-      [Object.keys(addrMap)],
-    );
+    const results = await address.findAll({
+      attributes: ['address', 'index', 'transactions'],
+      where: {
+        address: {
+          [Op.in]: Object.keys(addrMap),
+        },
+        // address: Object.keys(addrMap), // implicit use of IN operator
+      },
+    });
 
     for (const entry of results) {
-      const address = entry.address as string;
+      const addr = entry.get('address') as string;
       // get index from addrMap as the one from entry might be null
-      const index = addrMap[address];
+      const index = addrMap[addr];
       // add to existingAddresses
-      existingAddresses[address] = index;
+      existingAddresses[addr] = index;
 
       // if address is used, check if its index is higher than the current highest used index
-      if (entry.transactions > 0 && index > highestUsedIndex) {
+      if (entry.get('transactions') as number > 0 && index > highestUsedIndex) {
         highestUsedIndex = index;
       }
 
-      delete addrMap[address];
+      delete addrMap[addr];
     }
 
     highestCheckedIndex += maxGap;
@@ -104,9 +111,9 @@ export const generateAddresses = async (mysql: ServerlessMysql, xpubkey: string,
   // we probably generated more addresses than needed, as we always generate
   // addresses in maxGap blocks
   const totalAddresses = highestUsedIndex + maxGap + 1;
-  for (const [address, index] of Object.entries(newAddresses)) {
+  for (const [addr, index] of Object.entries(newAddresses)) {
     if (index > highestUsedIndex + maxGap) {
-      delete newAddresses[address];
+      delete newAddresses[addr];
     }
   }
 

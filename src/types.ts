@@ -18,6 +18,10 @@ import {
   Callback,
 } from 'aws-lambda';
 
+import {
+  Optional,
+} from 'sequelize';
+
 export interface StringMap<T> {
   [x: string]: T;
 }
@@ -72,12 +76,6 @@ export interface Wallet {
   status?: WalletStatus;
   createdAt?: number;
   readyAt?: number;
-}
-
-export interface AddressInfo {
-  address: string;
-  index: number;
-  transactions: number;
 }
 
 export interface TokenBalance {
@@ -608,3 +606,13 @@ export type WalletProxyHandler = (
   context?: Context,
   callback?: Callback<APIGatewayProxyResult>
 ) => Promise<APIGatewayProxyResult>;
+
+export interface AddressInfo {
+  address: string;
+  index: number | null;
+  // eslint-disable-next-line camelcase
+  wallet_id: string | null;
+  transactions: number;
+}
+
+export type AddressCreationInfo = Optional<AddressInfo, 'index' | 'wallet_id'>;
