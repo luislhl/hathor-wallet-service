@@ -53,6 +53,7 @@ import {
   unspendUtxos,
   filterUtxos,
   getTxProposalInputs,
+  getMempoolTransactionsBeforeDate,
 } from '@src/db';
 import {
   Authorities,
@@ -72,8 +73,10 @@ import {
 import {
   ADDRESSES,
   XPUBKEY,
+  TX_IDS,
   addToAddressBalanceTable,
   addToAddressTable,
+  addToTransactionTable,
   addToAddressTxHistoryTable,
   addToTokenTable,
   addToUtxoTable,
@@ -1630,4 +1633,18 @@ test('filterUtxos should throw if addresses are empty', async () => {
   expect.hasAssertions();
 
   await expect(filterUtxos(mysql, { addresses: [] })).rejects.toThrow('Addresses can\'t be empty.');
+});
+
+test('getMempoolTransactionsBeforeDate', async () => {
+  expect.hasAssertions();
+
+  const transactions = [
+    [TX_IDS[0], 1, 2, false, null],
+    [TX_IDS[1], 5, 2, false, null],
+    [TX_IDS[2], 10, 2, false, null],
+  ];
+
+  await addToTransactionTable(mysql, transactions);
+
+  expect(await getMempoolTransactionsBeforeDate(mysql, 11)).toHaveLength(3);
 });
