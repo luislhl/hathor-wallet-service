@@ -2210,7 +2210,7 @@ export const getMempoolTransactionsBeforeDate = async (
     `SELECT *
        FROM \`transaction\`
       WHERE \`timestamp\` < ?
-        AND \`voided\` = TRUE
+        AND \`voided\` = FALSE
         AND \`height\` IS NULL`,
     [date],
   );
