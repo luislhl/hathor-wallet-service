@@ -1646,5 +1646,5 @@ test('getMempoolTransactionsBeforeDate', async () => {
 
   await addToTransactionTable(mysql, transactions);
 
-  expect(await getMempoolTransactionsBeforeDate(mysql, 11)).toHaveLength(3);
+  expect(await getMempoolTransactionsBeforeDate(mysql, 6)).toHaveLength(2);
 });
