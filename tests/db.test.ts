@@ -1646,5 +1646,20 @@ test('getMempoolTransactionsBeforeDate', async () => {
 
   await addToTransactionTable(mysql, transactions);
 
-  expect(await getMempoolTransactionsBeforeDate(mysql, 6)).toHaveLength(2);
+  const mempoolTransactions = await getMempoolTransactionsBeforeDate(mysql, 6);
+
+  expect(mempoolTransactions).toHaveLength(2);
+  expect(mempoolTransactions).toStrictEqual([{
+    txId: TX_IDS[0],
+    timestamp: 1,
+    version: 2,
+    voided: 0,
+    height: null,
+  }, {
+    txId: TX_IDS[1],
+    timestamp: 5,
+    version: 2,
+    voided: 0,
+    height: null,
+  }]);
 });
