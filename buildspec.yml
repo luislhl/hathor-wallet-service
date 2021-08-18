@@ -2,6 +2,28 @@ version: 0.2
 
 env:
   git-credential-helper: yes
+  variables:
+    NODE_ENV: "production"
+    NETWORK: "testnet"
+    MAX_ADDRESS_GAP: 10
+    WALLET_CONN_LIMIT: 10
+    BLOCK_REWARD_LOCK: 300
+    CONFIRM_FIRST_ADDRESS: true
+    AWS_VPC_DEFAULT_SG_ID: "sg-e3dbfc8f"
+    AWS_SUBNET_ID_1: "subnet-e50c198e"
+    AWS_SUBNET_ID_2: "subnet-db613696"
+    AWS_SUBNET_ID_3: "subnet-d096d6ad"
+  # https://eu-central-1.console.aws.amazon.com/secretsmanager/home?region=eu-central-1#!/listSecrets
+  secrets-manager:
+    ADMINTOKEN: "WalletService/dev:admintoken"
+    AUTH_SECRET: "WalletService/dev:auth_secret"
+    PROD_DB_NAME: "WalletService/rds/dev:dbname"
+    PROD_DB_USERNAME: "WalletService/rds/dev:username"
+    PROD_DB_PASSWORD: "WalletService/rds/dev:password"
+    PROD_DB_HOST: "WalletService/rds/dev:host"
+    PROD_DB_PORT: "WalletService/rds/dev:port"
+    REDIS_URL: "WalletService/redis/dev:url"
+    REDIS_PASSWORD: "WalletService/redis/dev:password"
 phases:
   install:
     #If you use the Ubuntu standard image 2.0 or later, you must specify runtime-versions.
@@ -9,26 +31,22 @@ phases:
     runtime-versions:
       nodejs: 14
       # name: version
-    #commands:
-      # - command
-      # - command
+    commands:
+      - npm i --also=dev
   pre_build:
     commands:
       - ls -lt
-      - cat README.md
   build:
     commands:
-      - git log | head -100
-      - git status
-      - ls
-      - git archive --format=zip HEAD > application.zip
+      - make migrate
+      - make deploy-lambdas-dev
   #post_build:
     #commands:
       # - command
       # - command
-artifacts:
-  files:
-    - application.zip
+#artifacts:
+#  files:
+#    - application.zip
     # - location
   #name: $(date +%Y-%m-%d)
   #discard-paths: yes
