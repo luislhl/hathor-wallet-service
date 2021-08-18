@@ -20,7 +20,7 @@ env:
     PROD_DB_NAME: "WalletService/rds/dev:dbname"
     PROD_DB_USERNAME: "WalletService/rds/dev:username"
     PROD_DB_PASSWORD: "WalletService/rds/dev:password"
-    PROD_DB_HOST: "WalletService/rds/dev:host"
+    PROD_DB_HOSTNAME: "WalletService/rds/dev:host"
     PROD_DB_PORT: "WalletService/rds/dev:port"
     REDIS_URL: "WalletService/redis/dev:url"
     REDIS_PASSWORD: "WalletService/redis/dev:password"
