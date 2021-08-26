@@ -13,6 +13,7 @@ phases:
 artifacts:
   files:
     - hathor-wallet-service.zip
+  name: hathor-wallet-service.zip
   #name: $(date +%Y-%m-%d)
   #discard-paths: yes
   #base-directory: location
