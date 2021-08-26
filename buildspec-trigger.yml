@@ -5,7 +5,7 @@ env:
 phases:
   build:
     commands:
-      - echo "The code will be uploaded to S3"
+      - zip -r hathor-wallet-service.zip .
   #post_build:
     #commands:
       # - command
