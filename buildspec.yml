@@ -5,16 +5,16 @@ env:
   variables:
     NODE_ENV: "production"
     NETWORK: "testnet"
-    MAX_ADDRESS_GAP: 10
+    MAX_ADDRESS_GAP: 20
     WALLET_CONN_LIMIT: 10
     BLOCK_REWARD_LOCK: 300
     CONFIRM_FIRST_ADDRESS: true
     AWS_VPC_DEFAULT_SG_ID: "sg-e3dbfc8f"
-    AWS_SUBNET_ID_1: "subnet-e50c198e"
-    AWS_SUBNET_ID_2: "subnet-db613696"
-    AWS_SUBNET_ID_3: "subnet-d096d6ad"
-  # https://eu-central-1.console.aws.amazon.com/secretsmanager/home?region=eu-central-1#!/listSecrets
+    AWS_SUBNET_ID_1: "subnet-0a0e14dd37306ab3d"
+    AWS_SUBNET_ID_2: "subnet-05de110f4ea8d425b"
+    AWS_SUBNET_ID_3: "subnet-0de32ea8c0f64f1bc"
   secrets-manager:
+    # https://eu-central-1.console.aws.amazon.com/secretsmanager/home?region=eu-central-1#!/listSecrets
     ADMINTOKEN: "WalletService/dev:admintoken"
     AUTH_SECRET: "WalletService/dev:auth_secret"
     PROD_DB_NAME: "WalletService/rds/dev:dbname"
@@ -39,7 +39,7 @@ phases:
   build:
     commands:
       - make migrate
-      - make deploy-lambdas-dev
+      - make deploy-lambdas-dev-testnet
   #post_build:
     #commands:
       # - command
