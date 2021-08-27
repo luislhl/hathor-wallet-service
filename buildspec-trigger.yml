@@ -5,7 +5,8 @@ env:
 phases:
   build:
     commands:
-      - zip -r hathor-wallet-service.zip .
+      - echo "source code will be uploaded to S3"
+      - echo $CODEBUILD_SOURCE_VERSION
   #post_build:
     #commands:
       # - command
