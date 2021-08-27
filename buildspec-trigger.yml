@@ -7,6 +7,7 @@ phases:
     commands:
       - echo "source code will be uploaded to S3"
       - echo $CODEBUILD_SOURCE_VERSION
+      - echo $CODEBUILD_WEBHOOK_HEAD_REF
   #post_build:
     #commands:
       # - command
