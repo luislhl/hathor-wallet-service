@@ -83,8 +83,6 @@ phases:
             export ${var#dev_}=${!var}
           done
 
-          echo $NETWORK
-
           make migrate;
           make deploy-lambdas-dev-testnet;
         fi
