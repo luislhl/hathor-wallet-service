@@ -12,8 +12,9 @@ phases:
       # - command
 artifacts:
   files:
-    - hathor-wallet-service.zip
-  name: hathor-wallet-service.zip
+    - '**/*'
+    # - hathor-wallet-service.zip
+  name: hathor-wallet-service-source
   #name: $(date +%Y-%m-%d)
   #discard-paths: yes
   #base-directory: location
