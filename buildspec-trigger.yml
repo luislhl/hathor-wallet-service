@@ -6,7 +6,7 @@ phases:
   build:
     commands:
       - echo $CODEBUILD_WEBHOOK_HEAD_REF
-      - rm git_ref_to_deploy
+      - if [ -f git_ref_to_deploy ]; then rm git_ref_to_deploy; fi
       - |
         if expr "${CODEBUILD_WEBHOOK_HEAD_REF#refs/tags/}" : "v.*" >/dev/null; then
           echo "${CODEBUILD_WEBHOOK_HEAD_REF#refs/tags/}" > git_ref_to_deploy
