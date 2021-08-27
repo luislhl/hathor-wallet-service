@@ -35,7 +35,7 @@ phases:
       - npm i --also=dev
   pre_build:
     commands:
-      - ls -lt
+      - echo $CODEBUILD_WEBHOOK_HEAD_REF
   build:
     commands:
       - make migrate
