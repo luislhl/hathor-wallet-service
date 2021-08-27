@@ -11,8 +11,11 @@ env:
     WALLET_CONN_LIMIT: 10
     BLOCK_REWARD_LOCK: 300
     CONFIRM_FIRST_ADDRESS: true
+    dev_DEFAULT_SERVER: "https://dev.testnet.wallet-service.private-nodes.hathor.network/v1a/"
     dev_NETWORK: "testnet"
+    testnet_DEFAULT_SERVER: "https://testnet.wallet-service.private-nodes.hathor.network/v1a/"
     testnet_NETWORK: "testnet"
+    mainnet_DEFAULT_SERVER: "https://wallet-service.private-nodes.hathor.network/v1a/"
     mainnet_NETWORK: "mainnet"
   # https://eu-central-1.console.aws.amazon.com/secretsmanager/home?region=eu-central-1#!/listSecrets
   secrets-manager:
