@@ -1,29 +1,63 @@
 version: 0.2
 
+# The envs are organized in a way that some of them will have prefixes, indicating the environment corresponding to them.
+# In the build section we check which environment is being deployed and choose the envs accordingly.
+# The ones without prefixes are used in all environments.
 env:
   git-credential-helper: yes
   variables:
     NODE_ENV: "production"
-    NETWORK: "testnet"
     MAX_ADDRESS_GAP: 20
     WALLET_CONN_LIMIT: 10
     BLOCK_REWARD_LOCK: 300
     CONFIRM_FIRST_ADDRESS: true
-    AWS_VPC_DEFAULT_SG_ID: "sg-e3dbfc8f"
-    AWS_SUBNET_ID_1: "subnet-0a0e14dd37306ab3d"
-    AWS_SUBNET_ID_2: "subnet-05de110f4ea8d425b"
-    AWS_SUBNET_ID_3: "subnet-0de32ea8c0f64f1bc"
+    dev_NETWORK: "testnet"
+    testnet_NETWORK: "testnet"
+    mainnet_NETWORK: "mainnet"
+  # https://eu-central-1.console.aws.amazon.com/secretsmanager/home?region=eu-central-1#!/listSecrets
   secrets-manager:
-    # https://eu-central-1.console.aws.amazon.com/secretsmanager/home?region=eu-central-1#!/listSecrets
-    ADMINTOKEN: "WalletService/dev:admintoken"
-    AUTH_SECRET: "WalletService/dev:auth_secret"
-    PROD_DB_NAME: "WalletService/rds/dev:dbname"
-    PROD_DB_USERNAME: "WalletService/rds/dev:username"
-    PROD_DB_PASSWORD: "WalletService/rds/dev:password"
-    PROD_DB_HOSTNAME: "WalletService/rds/dev:host"
-    PROD_DB_PORT: "WalletService/rds/dev:port"
-    REDIS_URL: "WalletService/redis/dev:url"
-    REDIS_PASSWORD: "WalletService/redis/dev:password"
+    # Dev secrets
+    dev_ADMINTOKEN: "WalletService/dev:admintoken"
+    dev_AUTH_SECRET: "WalletService/dev:auth_secret"
+    dev_AWS_VPC_DEFAULT_SG_ID: "WalletService/dev:aws_vpc_default_sg_id"
+    dev_AWS_SUBNET_ID_1: "WalletService/dev:aws_subnet_id_1"
+    dev_AWS_SUBNET_ID_2: "WalletService/dev:aws_subnet_id_2"
+    dev_AWS_SUBNET_ID_3: "WalletService/dev:aws_subnet_id_3"
+    dev_PROD_DB_NAME: "WalletService/rds/dev:dbname"
+    dev_PROD_DB_USERNAME: "WalletService/rds/dev:username"
+    dev_PROD_DB_PASSWORD: "WalletService/rds/dev:password"
+    dev_PROD_DB_HOSTNAME: "WalletService/rds/dev:host"
+    dev_PROD_DB_PORT: "WalletService/rds/dev:port"
+    dev_REDIS_URL: "WalletService/redis/dev:url"
+    dev_REDIS_PASSWORD: "WalletService/redis/dev:password"
+    # Testnet secrets
+    testnet_ADMINTOKEN: "WalletService/testnet:admintoken"
+    testnet_AUTH_SECRET: "WalletService/testnet:auth_secret"
+    testnet_AWS_VPC_DEFAULT_SG_ID: "WalletService/testnet:aws_vpc_default_sg_id"
+    testnet_AWS_SUBNET_ID_1: "WalletService/testnet:aws_subnet_id_1"
+    testnet_AWS_SUBNET_ID_2: "WalletService/testnet:aws_subnet_id_2"
+    testnet_AWS_SUBNET_ID_3: "WalletService/testnet:aws_subnet_id_3"
+    testnet_PROD_DB_NAME: "WalletService/rds/testnet:dbname"
+    testnet_PROD_DB_USERNAME: "WalletService/rds/testnet:username"
+    testnet_PROD_DB_PASSWORD: "WalletService/rds/testnet:password"
+    testnet_PROD_DB_HOSTNAME: "WalletService/rds/testnet:host"
+    testnet_PROD_DB_PORT: "WalletService/rds/testnet:port"
+    testnet_REDIS_URL: "WalletService/redis/testnet:url"
+    testnet_REDIS_PASSWORD: "WalletService/redis/testnet:password"
+    # Mainnet secrets
+    mainnet_ADMINTOKEN: "WalletService/mainnet:admintoken"
+    mainnet_AUTH_SECRET: "WalletService/mainnet:auth_secret"
+    mainnet_AWS_VPC_DEFAULT_SG_ID: "WalletService/mainnet:aws_vpc_default_sg_id"
+    mainnet_AWS_SUBNET_ID_1: "WalletService/mainnet:aws_subnet_id_1"
+    mainnet_AWS_SUBNET_ID_2: "WalletService/mainnet:aws_subnet_id_2"
+    mainnet_AWS_SUBNET_ID_3: "WalletService/mainnet:aws_subnet_id_3"
+    mainnet_PROD_DB_NAME: "WalletService/rds/mainnet:dbname"
+    mainnet_PROD_DB_USERNAME: "WalletService/rds/mainnet:username"
+    mainnet_PROD_DB_PASSWORD: "WalletService/rds/mainnet:password"
+    mainnet_PROD_DB_HOSTNAME: "WalletService/rds/mainnet:host"
+    mainnet_PROD_DB_PORT: "WalletService/rds/mainnet:port"
+    mainnet_REDIS_URL: "WalletService/redis/mainnet:url"
+    mainnet_REDIS_PASSWORD: "WalletService/redis/mainnet:password"
 phases:
   install:
     #If you use the Ubuntu standard image 2.0 or later, you must specify runtime-versions.
@@ -40,16 +74,33 @@ phases:
     commands:
       - |
         if expr "${GIT_REF_TO_DEPLOY}" : "dev" >/dev/null; then
+          # Gets all env vars with `dev_` prefix and re-exports them without the prefix
+          for var in "${!dev_@}"; do
+            export ${var#dev_}=${!var}
+          done
+
+          echo $NETWORK
+
           make migrate;
           make deploy-lambdas-dev-testnet;
         fi
       - |
         if expr "${GIT_REF_TO_DEPLOY}" : "master" >/dev/null; then
+          # Gets all env vars with `testnet_` prefix and re-exports them without the prefix
+          for var in "${!testnet_@}"; do
+            export ${var#testnet_}=${!var}
+          done
+
           make migrate;
           make deploy-lambdas-testnet;
         fi
       - |
         if expr "${GIT_REF_TO_DEPLOY}" : "v.*" >/dev/null; then
+          # Gets all env vars with `mainnet_` prefix and re-exports them without the prefix
+          for var in "${!mainnet_@}"; do
+            export ${var#mainet_}=${!var}
+          done
+
           make migrate;
           make deploy-lambdas-mainnet;
         fi
