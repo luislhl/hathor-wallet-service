@@ -94,7 +94,7 @@ functions:
   onHandleReorgRequest:
     handler: src/txProcessor.onHandleReorgRequest
     timeout: 300 # 5 minutes
-  onSearchForLatestValidBlockRequest:
+  onSearchForLatestValidBlock:
     handler: src/txProcessor.onSearchForLatestValidBlockRequest
   onNewTxEvent:
     handler: src/txProcessor.onNewTxEvent
