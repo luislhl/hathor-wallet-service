@@ -35,11 +35,24 @@ phases:
       - npm i --also=dev
   pre_build:
     commands:
-      - echo $CODEBUILD_WEBHOOK_HEAD_REF
+      - export GIT_REF_TO_DEPLOY=$(cat git_ref_to_deploy)
   build:
     commands:
-      - make migrate
-      - make deploy-lambdas-dev-testnet
+      - |
+        if expr "${GIT_REF_TO_DEPLOY}" : "dev" >/dev/null; then
+          make migrate;
+          make deploy-lambdas-dev-testnet;
+        fi
+      - |
+        if expr "${GIT_REF_TO_DEPLOY}" : "master" >/dev/null; then
+          make migrate;
+          make deploy-lambdas-testnet;
+        fi
+      - |
+        if expr "${GIT_REF_TO_DEPLOY}" : "v.*" >/dev/null; then
+          make migrate;
+          make deploy-lambdas-mainnet;
+        fi
   #post_build:
     #commands:
       # - command

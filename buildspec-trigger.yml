@@ -5,9 +5,21 @@ env:
 phases:
   build:
     commands:
-      - echo "source code will be uploaded to S3"
-      - echo $CODEBUILD_SOURCE_VERSION
       - echo $CODEBUILD_WEBHOOK_HEAD_REF
+      - |
+        if expr "${CODEBUILD_WEBHOOK_HEAD_REF#refs/tags/}" : "v.*" >/dev/null; then
+          echo "${CODEBUILD_WEBHOOK_HEAD_REF#refs/tags/}" > git_ref_to_deploy
+        fi
+      - |
+        if expr "${CODEBUILD_WEBHOOK_HEAD_REF#refs/heads/}" : "master" >/dev/null; then
+          echo "${CODEBUILD_WEBHOOK_HEAD_REF#refs/heads/}" > git_ref_to_deploy
+        fi
+      - |
+        if expr "${CODEBUILD_WEBHOOK_HEAD_REF#refs/heads/}" : "dev" >/dev/null; then
+          echo "${CODEBUILD_WEBHOOK_HEAD_REF#refs/heads/}" > git_ref_to_deploy
+        fi
+      - echo "source code will be uploaded to S3"
+
   #post_build:
     #commands:
       # - command
