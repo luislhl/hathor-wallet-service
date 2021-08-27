@@ -4,6 +4,7 @@ version: 0.2
 # In the build section we check which environment is being deployed and choose the envs accordingly.
 # The ones without prefixes are used in all environments.
 env:
+  shell: bash
   git-credential-helper: yes
   variables:
     NODE_ENV: "production"
